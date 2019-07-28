@@ -1,52 +1,21 @@
-function L = laplacian(x, t, edgepoints)
+function L = laplacian(x, t)
 % compute cotanget Laplacan of mesh (x, t)
-
 nv = size(x, 1);
-nf = size(t, 1);
-L = sparse(nv, nv);
-ind=sub2ind([nv,nv],1:nv,1:nv);
-L(ind)=1;
 
-%Initializes the array of struct
-[vertices(1:nv).neighbortriangles]=deal([]);
-[vertices(1:nv).neighborpoints]=deal([]);
+e1=x(t(:,1),:)-x(t(:,2),:);
+e2=x(t(:,3),:)-x(t(:,1),:);
+e3=x(t(:,2),:)-x(t(:,3),:);
 
-%Get the adjacency trangle facets of each point
-for i=1:nf
-    for j=1:3
-        vertices(t(i,j)).neighbortriangles=[vertices(t(i,j)).neighbortriangles,i];
-    end
-end
+alpha1=acos(-(dot(e1',e2'))'./sqrt(sum(e1.^2,2).*sum(e2.^2,2)));
+alpha2=acos(-(dot(e2',e3'))'./sqrt(sum(e2.^2,2).*sum(e3.^2,2)));
+alpha3=acos(-(dot(e1',e3'))'./sqrt(sum(e1.^2,2).*sum(e3.^2,2)));
 
-%Get the adjacency point of each point
-for i=1:nv
-    temp=t(vertices(i).neighbortriangles(:),:);
-    vertices(i).neighborpoints=union(vertices(i).neighborpoints,temp);
-    vertices(i).neighborpoints=(setdiff(vertices(i).neighborpoints,i))';
-end
+L = sparse( t(:,[2 1 3]), t(:,[3 2 1]), cot([alpha1,alpha2,alpha3]), nv, nv );
+L=L+L';
+L=-spdiags(-sum(L,2),0,L);
 
-% compute cotanget Laplacan of mesh (x, t)
-for i=1:nv
-    if all(edgepoints~=i) 
-       numadjpoints=size(vertices(i).neighborpoints,2); 
-       weights=zeros(1,numadjpoints);
-       for j=1:numadjpoints 
-           k=vertices(i).neighborpoints(j);
-           tri=[];
-           for l=1:size(vertices(i).neighbortriangles,2)
-               m=vertices(i).neighbortriangles(l);
-               if any(t(m,:)==i) && any(t(m,:)==k)
-                   tri=[tri;t(m,:)];
-               end
-           end
-           c=sum(tri(1,:),2)-i-k;
-           d=sum(tri(2,:),2)-i-k;
-           alpha=subspace((x(i,:)-x(c,:))',(x(k,:)-x(c,:))');
-           beta=subspace((x(i,:)-x(d,:))',(x(k,:)-x(d,:))');
-           weights(j)=cot(alpha)+cot(beta);
-       end 
-       L(i,vertices(i).neighborpoints(:))=-weights/sum(weights,2);
-    end                    
-end
+
+
+
 
 
