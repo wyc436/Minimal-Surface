@@ -2,7 +2,7 @@ clc
 clear
 
 [x, t] = readObj('../meshes/Cat_head.obj');
-[x, t]=subdivdision(x, t, 3);
+% [x, t]=subdivdision(x, t, 3);
 
 %% draw 2 copies of the image
 figure; set(gcf, 'Units', 'normalized', 'Position', [0.05,0.05,.8,.8]);
@@ -13,15 +13,19 @@ subplot(122); h = trimesh(t, x(:,1), x(:,2), x(:,3), 'edgecolor', 'k'); axis off
 nv=size(x,1);
 nf=size(t,1);
 
-%% Get boundary vertice id
-Edge = sparse(t, t(:, [2 3 1]), true, nv, nv);
-[edgepoints,e2] = find(xor( Edge, Edge'));
+%% Get boundary vertice id 
+adjMatrix  = sparse(t, t(:, [2 3 1]), true, nv, nv);
+[boundaryPointIds,e2] = find(xor( adjMatrix, adjMatrix'));
 
-for i=1:5
+areaOld=inf;
+areaNew=area(x,t);
+while areaOld-areaNew>1e-3
+    areaOld=areaNew;
+    
     %% TODO: compute Laplacian
     L = laplacian(x, t);
-    L(edgepoints(:),:)=0;
-    ind=sub2ind([nv,nv],edgepoints(:),edgepoints(:));
+    L(boundaryPointIds(:),:)=0;
+    ind=sub2ind([nv,nv],boundaryPointIds(:),boundaryPointIds(:));
     L(ind)=1;
 
     %% TODO: compute minimal surface using LOCAL approach
@@ -37,8 +41,10 @@ for i=1:5
 
     %% TODO: compute minimal surface using GLOBAL approach
     b=zeros(nv,3);
-    b(edgepoints(:),:)=x(edgepoints(:),:);
+    b(boundaryPointIds(:),:)=x(boundaryPointIds(:),:);
     x=L\b;
+    areaNew=area(x,t);
 end
+
 %% draw mesh in minimal surface iterations
 set(h, 'Vertices', x);
